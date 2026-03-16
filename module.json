@@ -1,15 +1,32 @@
 {
   "id": "vision-light-manager",
   "title": "Vision & Light Manager",
-  "description": "Automatically syncs token vision settings from DnD5e character sheets, and provides players with a GUI to equip light sources.",
+  "description": "Automatically syncs token vision settings from D&D 5e character sheets, and provides a sidebar panel for players to quickly equip light sources including torch, bullseye lantern, candle, and more.",
   "version": "1.0.0",
+  "url": "https://www.patreon.com/LaserW1tch",
+  "manifest": "https://raw.githubusercontent.com/LaserW1tch/vision-and-light-management/main/module.json",
+  "download": "https://github.com/LaserW1tch/vision-and-light-management/releases/download/1.0.0/vision-light-manager.zip",
+  "readme": "https://raw.githubusercontent.com/LaserW1tch/vision-and-light-management/main/README.md",
   "compatibility": {
     "minimum": "13",
     "verified": "13"
   },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.0.0",
+          "verified": "5.2.5"
+        }
+      }
+    ]
+  },
   "authors": [
     {
-      "name": "Custom Module"
+      "name": "LaserW1tch",
+      "url": "https://www.patreon.com/LaserW1tch"
     }
   ],
   "scripts": [
