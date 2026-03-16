@@ -1,0 +1,24 @@
+{
+  "id": "vision-light-manager",
+  "title": "Vision & Light Manager",
+  "description": "Automatically syncs token vision settings from DnD5e character sheets, and provides players with a GUI to equip light sources.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "authors": [
+    {
+      "name": "Custom Module"
+    }
+  ],
+  "scripts": [
+    "scripts/vision-sync.js",
+    "scripts/light-gui.js"
+  ],
+  "styles": [
+    "styles/light-gui.css"
+  ],
+  "languages": [],
+  "flags": {}
+}

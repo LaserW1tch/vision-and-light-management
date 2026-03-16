@@ -1,0 +1,279 @@
+/* ============================================================
+   Vision & Light Manager — light-gui.css
+   Theme: refined dark fantasy instrument panel
+   Fonts: Cinzel (headers) + system serif (body)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap');
+
+/* ── APP WINDOW ─────────────────────────────────────────────── */
+
+.vlm-app .window-content {
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.vlm-app .window-header {
+  background: linear-gradient(135deg, #0e1420, #1a2030);
+  border-bottom: 1px solid rgba(100, 160, 255, 0.2);
+}
+
+.vlm-app .window-header .window-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: #8ab4e8;
+}
+
+/* ── MAIN WRAP ──────────────────────────────────────────────── */
+
+.vlm-wrap {
+  background: linear-gradient(160deg, #0c1018 0%, #111820 60%, #0a0e16 100%);
+  padding: 16px;
+  color: #c8d8f0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 13px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle top-edge glow */
+.vlm-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(100,180,255,0.6), rgba(160,220,255,0.8), rgba(100,180,255,0.6), transparent);
+  box-shadow: 0 0 12px rgba(100,180,255,0.4);
+}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+
+.vlm-header {
+  text-align: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(100,160,255,0.15);
+}
+
+.vlm-title {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  color: #a8c8f0;
+  text-shadow: 0 0 15px rgba(100,180,255,0.4);
+}
+
+.vlm-token-name {
+  font-size: 12px;
+  font-style: italic;
+  color: #5a7a9a;
+  letter-spacing: 2px;
+  margin-top: 3px;
+}
+
+/* ── PANEL LABEL ────────────────────────────────────────────── */
+
+.vlm-panel-label {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #6a9ac0;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+/* ── VISION PANEL ───────────────────────────────────────────── */
+
+.vlm-vision-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(100,160,255,0.12);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+
+.vlm-senses-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.vlm-sense {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(100,160,255,0.07);
+  border: 1px solid rgba(100,160,255,0.18);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.vlm-sense-icon { font-size: 13px; }
+
+.vlm-sense-name {
+  color: #8aaccc;
+  letter-spacing: 0.5px;
+}
+
+.vlm-sense-range {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  color: #a8c8f0;
+  margin-left: 2px;
+}
+
+/* Vision type accent colours */
+.vlm-sense-dark   { border-color: rgba(120,80,220,0.35); }
+.vlm-sense-dark   .vlm-sense-name { color: #a090e0; }
+.vlm-sense-blind  { border-color: rgba(80,180,220,0.35); }
+.vlm-sense-blind  .vlm-sense-name { color: #70c0e0; }
+.vlm-sense-true   { border-color: rgba(220,200,80,0.35); }
+.vlm-sense-true   .vlm-sense-name { color: #d0c070; }
+.vlm-sense-tremor { border-color: rgba(80,200,120,0.35); }
+.vlm-sense-tremor .vlm-sense-name { color: #70c090; }
+.vlm-sense-none   { border-color: rgba(100,100,100,0.2); opacity: 0.6; }
+
+/* Re-sync button */
+.vlm-sync-btn {
+  width: 100%;
+  background: rgba(100,160,255,0.08);
+  border: 1px solid rgba(100,160,255,0.22);
+  border-radius: 4px;
+  color: #7aaad0;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 5px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  margin-top: 2px;
+}
+
+.vlm-sync-btn:hover {
+  background: rgba(100,160,255,0.18);
+  border-color: rgba(100,160,255,0.5);
+  color: #a8c8f0;
+  box-shadow: 0 0 10px rgba(100,160,255,0.2);
+}
+
+/* ── LIGHT SOURCE GRID ──────────────────────────────────────── */
+
+.vlm-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.vlm-source-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid rgba(100,160,255,0.12);
+  border-radius: 6px;
+  padding: 10px 6px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vlm-source-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,200,80,0.0));
+  transition: background 0.18s;
+  border-radius: 6px;
+}
+
+.vlm-source-card:hover {
+  border-color: rgba(255,200,80,0.4);
+  background: linear-gradient(135deg, rgba(255,200,80,0.08), rgba(255,160,20,0.05));
+  box-shadow: 0 0 12px rgba(255,200,80,0.12), inset 0 0 8px rgba(255,200,80,0.04);
+  transform: translateY(-1px);
+}
+
+.vlm-source-card.vlm-active {
+  border-color: rgba(255,200,80,0.65) !important;
+  background: linear-gradient(135deg, rgba(255,200,80,0.14), rgba(255,160,20,0.08)) !important;
+  box-shadow: 0 0 18px rgba(255,200,80,0.2), inset 0 0 12px rgba(255,200,80,0.06) !important;
+}
+
+/* Active glow pulse */
+.vlm-source-card.vlm-active::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,200,80,0.4);
+  animation: activeCardPulse 2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes activeCardPulse {
+  from { box-shadow: 0 0 6px rgba(255,200,80,0.3); opacity: 0.7; }
+  to   { box-shadow: 0 0 16px rgba(255,200,80,0.6); opacity: 1; }
+}
+
+.vlm-source-icon {
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.vlm-source-label {
+  font-size: 11px;
+  color: #8aaccc;
+  line-height: 1.3;
+  margin-bottom: 3px;
+  font-family: Georgia, serif;
+}
+
+.vlm-source-card.vlm-active .vlm-source-label {
+  color: #e0c878;
+}
+
+.vlm-source-range {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  color: #4a6a8a;
+  letter-spacing: 0.5px;
+}
+
+.vlm-source-card.vlm-active .vlm-source-range {
+  color: #b09040;
+}
+
+/* ── TOKEN HUD BUTTON ───────────────────────────────────────── */
+
+#token-hud .vlm-hud-btn,
+#token-hud-v2 .vlm-hud-btn,
+.token-hud .vlm-hud-btn {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,200,80,0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+#token-hud .vlm-hud-btn:hover,
+#token-hud-v2 .vlm-hud-btn:hover,
+.token-hud .vlm-hud-btn:hover {
+  background: rgba(255,200,80,0.15);
+  border-color: rgba(255,200,80,0.7);
+  box-shadow: 0 0 10px rgba(255,200,80,0.3);
+}
+
+#token-hud .vlm-hud-btn i,
+#token-hud-v2 .vlm-hud-btn i,
+.token-hud .vlm-hud-btn i,
+#token-hud .vlm-hud-btn .fa-fire,
+#token-hud-v2 .vlm-hud-btn .fa-fire {
+  color: #ffcc44;
+  text-shadow: 0 0 8px rgba(255,200,80,0.6);
+}

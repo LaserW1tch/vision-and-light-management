@@ -1,0 +1,78 @@
+{{!-- templates/light-gui.html --}}
+<div class="vlm-wrap">
+
+  {{!-- Header --}}
+  <div class="vlm-header">
+    <div class="vlm-title">Light &amp; Vision</div>
+    <div class="vlm-token-name">{{tokenName}}</div>
+  </div>
+
+  {{!-- Vision Summary --}}
+  <div class="vlm-vision-panel">
+    <div class="vlm-panel-label">Current Vision</div>
+    <div class="vlm-senses-grid">
+      {{#if senses.darkvision}}
+        <div class="vlm-sense vlm-sense-dark">
+          <span class="vlm-sense-icon">👁️</span>
+          <span class="vlm-sense-name">Darkvision</span>
+          <span class="vlm-sense-range">{{senses.darkvision}} ft</span>
+        </div>
+      {{/if}}
+      {{#if senses.blindsight}}
+        <div class="vlm-sense vlm-sense-blind">
+          <span class="vlm-sense-icon">🔮</span>
+          <span class="vlm-sense-name">Blindsight</span>
+          <span class="vlm-sense-range">{{senses.blindsight}} ft</span>
+        </div>
+      {{/if}}
+      {{#if senses.truesight}}
+        <div class="vlm-sense vlm-sense-true">
+          <span class="vlm-sense-icon">✦</span>
+          <span class="vlm-sense-name">Truesight</span>
+          <span class="vlm-sense-range">{{senses.truesight}} ft</span>
+        </div>
+      {{/if}}
+      {{#if senses.tremorsense}}
+        <div class="vlm-sense vlm-sense-tremor">
+          <span class="vlm-sense-icon">〰️</span>
+          <span class="vlm-sense-name">Tremorsense</span>
+          <span class="vlm-sense-range">{{senses.tremorsense}} ft</span>
+        </div>
+      {{/if}}
+      {{#unless senses.darkvision}}
+        {{#unless senses.blindsight}}
+          {{#unless senses.truesight}}
+            {{#unless senses.tremorsense}}
+              <div class="vlm-sense vlm-sense-none">
+                <span class="vlm-sense-icon">👤</span>
+                <span class="vlm-sense-name">Normal Vision Only</span>
+              </div>
+            {{/unless}}
+          {{/unless}}
+        {{/unless}}
+      {{/unless}}
+    </div>
+    <button id="vlm-sync-vision" class="vlm-sync-btn">↺ Re-sync Vision from Sheet</button>
+  </div>
+
+  {{!-- Light Sources --}}
+  <div class="vlm-panel-label" style="margin-top:14px;">Equip Light Source</div>
+  <div class="vlm-sources-grid">
+    {{#each sources}}
+    <div class="vlm-source-card {{#if (eq this.id ../activeId)}}vlm-active{{/if}}"
+         data-id="{{this.id}}"
+         title="{{this.label}}">
+      <div class="vlm-source-icon">{{this.icon}}</div>
+      <div class="vlm-source-label">{{this.label}}</div>
+      {{#if this.bright}}
+        <div class="vlm-source-range">{{this.bright}}/{{this.dim}} ft</div>
+      {{else if this.dim}}
+        <div class="vlm-source-range">0/{{this.dim}} ft</div>
+      {{else}}
+        <div class="vlm-source-range">—</div>
+      {{/if}}
+    </div>
+    {{/each}}
+  </div>
+
+</div>
