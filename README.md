@@ -1,6 +1,6 @@
 # Vision & Light Manager
 
-A Foundry VTT module for **D&D 5e** that automatically syncs token vision settings from character sheets and gives players a clean, accessible interface for equipping light sources — all without the GM needing to manually configure token settings.
+A Foundry VTT module for **D&D 5e** that automatically syncs token vision settings from character sheets and gives players a simple panel for equipping light sources — all without the GM needing to manually configure token settings.
 
 ---
 
@@ -46,27 +46,25 @@ A sidebar button (🔥) appears in the Foundry sidebar tab strip for all users. 
 
 | Foundry VTT | D&D 5e System | Status |
 |---|---|---|
-| V13 | 5.2.x | ✅ Verified |
-| V12 | — | ❓ Untested |
+| V14.367 | 6.0.6 | Verified in the local testbed |
+| V13 | 5.2.5 | Previously listed as verified; not independently rechecked |
 
 ---
 
 ## Installation
 
-This is a **premium module** available for **$10** via the [LaserW1tch Patreon](https://www.patreon.com/LaserW1tch). Some marketplaces may include additional fees.
-
-Once you have the module zip:
+Download the current module archive, [`vision-light-manager-v1.1.0.zip`](https://github.com/LaserW1tch/vision-and-light-management/releases/download/1.1.0/vision-light-manager-v1.1.0.zip), from the project's GitHub release page.
 
 ### Via The Forge (Import Wizard)
 1. Go to `forge-vtt.com/setup` → **Summon Import Wizard**
 2. Toggle **off** "Install found packages from the Bazaar"
-3. Upload `vision-light-manager.zip`
+3. Upload `vision-light-manager-v1.1.0.zip`
 4. Click Analyze and complete the import
 5. Stop and restart your Foundry server
 6. Enable **Vision & Light Manager** in your world's Manage Modules settings
 
 ### Via Foundry VTT (self-hosted)
-1. Extract `vision-light-manager.zip` into your `Data/modules/` directory so the path reads `Data/modules/vision-light-manager/module.json`
+1. Extract `vision-light-manager-v1.1.0.zip` into your `Data/modules/` directory so the path reads `Data/modules/vision-light-manager/module.json`
 2. Restart Foundry
 3. Enable the module in your world's Manage Modules settings
 
@@ -104,9 +102,13 @@ game.modules.get("vision-light-manager").api.openLightGui();
 
 ## How Vision Sync Works
 
-The module reads senses from `actor.system.attributes.senses` — the standard dnd5e 5.x data path. It converts all ranges from feet to Foundry grid units using the active scene's grid distance (defaulting to 5 ft per square if no scene is active), then writes a nested `{ sight, detectionModes }` update to both the actor's prototype token and any live tokens currently placed on the canvas.
+The module reads senses from the current `actor.system.attributes.senses.ranges` path and falls back to the earlier `actor.system.attributes.senses` fields for older D&D 5e versions. Foundry expects vision and detection ranges in the Scene's distance units, so the module writes D&D 5e's feet values directly; configure the Scene's distance unit as feet. It updates the actor's prototype token and placed tokens, preserving detection modes managed by other modules. Automatic world-load syncing runs from the GM client to avoid duplicate writes from each connected player.
 
 Only player-owned character actors are processed. NPC tokens are never touched.
+
+## Future goals
+
+- Support metric measurement systems for sense ranges and light presets.
 
 ---
 
@@ -115,3 +117,7 @@ Only player-owned character actors are processed. NPC tokens are never touched.
 Copyright © LaserW1tch. All Rights Reserved.
 
 This module may not be copied, modified, redistributed, or sold without explicit written permission from the author.
+
+## Building a release archive
+
+From the repository root, run `python scripts/package.py`. The archive and SHA-256 file are written to `releases/`. The archive includes the module files and public documentation, with `module.json` inside the `vision-light-manager/` folder.

@@ -1,14 +1,15 @@
 /**
  * light-gui.js
  * Provides a styled dialog that lets players quickly equip a light source.
- * MODULE_ID is declared in vision-sync.js which loads first.
+ * Keep the module identifier local so another module cannot shadow it.
  */
 
-// MODULE_ID is already declared globally by vision-sync.js
+(() => {
+const VISION_LIGHT_MANAGER_GUI_ID = "vision-light-manager";
 
 
 // ── LIGHT SOURCE DEFINITIONS ──────────────────────────────────────────────────
-// All distances in feet (Foundry converts to grid units internally).
+// Preset ranges use feet; scenes should use feet as their distance unit.
 // bright + dim refer to the two light radii.
 // angle: 360 = omnidirectional, 52.5 = bullseye cone
 
@@ -114,18 +115,11 @@ const LIGHT_SOURCES = [
   },
 ];
 
-// ── HELPER: convert ft → Foundry units ───────────────────────────────────────
-// Foundry V13 stores light radii in scene grid units (not feet directly).
-// Default 5e grid: 1 square = 5ft, so divide by 5 to get squares,
-// then multiply by scene grid size in pixels. We use the scene's
-// distancePixels helper if available, otherwise assume 1 unit = 1ft.
-function ftToUnits(ft) {
-  if (!ft || ft === 0) return 0;
-  const scene = game.scenes?.active;
-  if (!scene) return ft;
-  // gridDistance = how many ft per grid square (usually 5)
-  const gridDistance = scene.grid?.distance ?? 5;
-  return (ft / gridDistance);
+// ── LIGHT RANGE UNITS ────────────────────────────────────────────────────────
+// Foundry stores token light radii in the Scene's configured distance units.
+// This module's presets are in feet, so write feet directly (e.g. 20/40).
+function ftToSceneUnits(ft) {
+  return Number.isFinite(ft) ? ft : 0;
 }
 
 // ── BUILD TOKEN LIGHT UPDATE ──────────────────────────────────────────────────
@@ -140,8 +134,8 @@ function buildLightUpdate(source) {
   }
 
   return {
-    "light.dim":    ftToUnits(source.dim),
-    "light.bright": ftToUnits(source.bright),
+    "light.dim":    ftToSceneUnits(source.dim),
+    "light.bright": ftToSceneUnits(source.bright),
     "light.color":  source.color,
     "light.alpha":  source.alpha,
     "light.angle":  source.angle,
@@ -155,89 +149,103 @@ function buildLightUpdate(source) {
 
 // ── APPLICATION CLASS ─────────────────────────────────────────────────────────
 
-class LightSourceApp extends Application {
+class LightSourceApp extends foundry.applications.api.HandlebarsApplicationMixin(
+  foundry.applications.api.ApplicationV2
+) {
+  static DEFAULT_OPTIONS = {
+    id: "vlm-light-gui",
+    classes: ["vlm-app"],
+    window: { title: "Light & Vision" },
+    position: { width: 420 },
+  };
+
+  static PARTS = {
+    main: { template: `modules/${VISION_LIGHT_MANAGER_GUI_ID}/templates/light-gui.html` },
+  };
 
   constructor(token, options = {}) {
     super(options);
-    this.token = token;  // The TokenDocument
+    this.token = token;
+    this.selectedLightSourceId = null;
   }
 
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id:       "vlm-light-gui",
-      title:    "Light & Vision",
-      template: `modules/${MODULE_ID}/templates/light-gui.html`,
-      width:    420,
-      height:   "auto",
-      resizable: false,
-      classes:  ["vlm-app"],
-    });
-  }
-
-  getData() {
-    // Find currently active light source by comparing dim radius
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
     const currentDim = this.token.light?.dim ?? 0;
     const currentBright = this.token.light?.bright ?? 0;
+    const api = game.modules.get(VISION_LIGHT_MANAGER_GUI_ID)?.api;
+    const actor = this.token.actor;
+    const senses = actor && typeof api?.getSensesFromActor === "function"
+      ? api.getSensesFromActor(actor)
+      : {};
 
-    // Get senses from the actor for the display panel
-    const actor  = this.token.actor;
-    const senses = actor ? game.modules.get(MODULE_ID).api.getSensesFromActor(actor) : {};
-
-    // Determine active source id
-    let activeId = "none";
-    for (const src of LIGHT_SOURCES) {
-      if (src.id === "none") continue;
-      if (
-        Math.abs(ftToUnits(src.dim)    - currentDim)    < 0.5 &&
-        Math.abs(ftToUnits(src.bright) - currentBright) < 0.5
-      ) {
-        activeId = src.id;
-        break;
-      }
-    }
+    const matchingSources = LIGHT_SOURCES.filter(source => source.id !== "none" &&
+      Math.abs(ftToSceneUnits(source.dim) - currentDim) < 0.5 &&
+      Math.abs(ftToSceneUnits(source.bright) - currentBright) < 0.5);
+    const currentColor = this.token.light?.color?.toString().toLowerCase();
+    const activeSource = matchingSources.find(source =>
+      source.color.toLowerCase() === currentColor &&
+      source.angle === (this.token.light?.angle ?? 360)
+    ) ?? matchingSources[0];
+    const activeId = this.selectedLightSourceId ?? activeSource?.id ?? "none";
 
     return {
-      sources:    LIGHT_SOURCES,
-      activeId,
+      ...context,
+      sources: LIGHT_SOURCES.map(source => ({
+        ...source,
+        isActive: source.id === activeId,
+      })),
       senses,
-      tokenName:  this.token.name,
+      tokenName: this.token.name,
     };
   }
 
-  activateListeners(html) {
-    super.activateListeners(html);
+  _onRender(context, options) {
+    super._onRender(context, options);
+    this._clickController?.abort();
+    this._clickController = new AbortController();
+    this.element.addEventListener("click", event => {
+      const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+      const card = target?.closest(".vlm-source-card");
+      if (card) void this.#equipLight(card.dataset.id);
+      if (target?.closest("#vlm-sync-vision")) void this.#syncVision();
+    }, { signal: this._clickController.signal });
+  }
 
-    // Light source card click
-    html.find(".vlm-source-card").click(async (ev) => {
-      const id     = ev.currentTarget.dataset.id;
-      const source = LIGHT_SOURCES.find(s => s.id === id);
-      if (!source) return;
+  async #equipLight(id) {
+    const source = LIGHT_SOURCES.find(candidate => candidate.id === id);
+    if (!source) return;
+    try {
+      await this.token.update(buildLightUpdate(source));
+      this.selectedLightSourceId = source.id;
+      ui.notifications.info(
+        source.id === "none"
+          ? `${this.token.name} extinguishes their light.`
+          : `${this.token.name} equips: ${source.label}.`
+      );
+      await this.render();
+    } catch (error) {
+      ui.notifications.error("Failed to update token light.");
+      console.error(`${VISION_LIGHT_MANAGER_GUI_ID} |`, error);
+    }
+  }
 
-      const update = buildLightUpdate(source);
-
-      try {
-        await this.token.update(update);
-        ui.notifications.info(
-          source.id === "none"
-            ? `${this.token.name} extinguishes their light.`
-            : `${this.token.name} equips: ${source.label}.`
-        );
-        // Re-render to update active state
-        this.render(false);
-      } catch(e) {
-        ui.notifications.error("Failed to update token light.");
-        console.error(`${MODULE_ID} |`, e);
-      }
-    });
-
-    // Re-sync vision button
-    html.find("#vlm-sync-vision").click(async () => {
-      const actor = this.token.actor;
-      if (!actor) return;
-      await game.modules.get(MODULE_ID).api.applyVisionToActor(actor);
+  async #syncVision() {
+    const actor = this.token.actor;
+    if (!actor) return;
+    const applyVision = game.modules.get(VISION_LIGHT_MANAGER_GUI_ID)?.api?.applyVisionToActor;
+    if (typeof applyVision !== "function") {
+      ui.notifications.error("Vision sync is not ready. Reload the world and try again.");
+      return;
+    }
+    try {
+      await applyVision(actor);
       ui.notifications.info(`Vision re-synced for ${actor.name}.`);
-      this.render(false);
-    });
+      await this.render();
+    } catch (error) {
+      ui.notifications.error("Failed to re-sync vision. Check the console for details.");
+      console.error(`${VISION_LIGHT_MANAGER_GUI_ID} | Vision sync failed:`, error);
+    }
   }
 }
 
@@ -246,7 +254,7 @@ class LightSourceApp extends Application {
 // Targets #sidebar-tabs menu directly — confirmed working in this Foundry build.
 
 Hooks.once("ready", () => {
-  const api = game.modules.get(MODULE_ID).api ?? {};
+  const api = game.modules.get(VISION_LIGHT_MANAGER_GUI_ID).api ?? {};
 
   // ── openLightGui helper ──
   api.openLightGui = function(actorOrToken) {
@@ -262,17 +270,21 @@ Hooks.once("ready", () => {
       ui.notifications.warn("No token found. Select a token first.");
       return;
     }
-    new LightSourceApp(tokenDoc).render(true);
+    if (!game.user.isGM && !tokenDoc.actor?.isOwner) {
+      ui.notifications.warn(game.i18n.localize("VLM.Errors.NoPermission"));
+      return;
+    }
+    new LightSourceApp(tokenDoc).render({ force: true });
   };
 
-  game.modules.get(MODULE_ID).api = api;
+  game.modules.get(VISION_LIGHT_MANAGER_GUI_ID).api = api;
 
   // ── Inject sidebar button ──
   if (document.querySelector("#vlm-sidebar-btn")) return;
 
   const menu = document.querySelector("#sidebar-tabs menu");
   if (!menu) {
-    console.warn(`${MODULE_ID} | Could not find #sidebar-tabs menu — button not injected.`);
+    console.warn(`${VISION_LIGHT_MANAGER_GUI_ID} | Could not find #sidebar-tabs menu — button not injected.`);
     return;
   }
 
@@ -299,9 +311,10 @@ Hooks.once("ready", () => {
       ui.notifications.warn("Selected token must be a character.");
       return;
     }
-    new LightSourceApp(token.document).render(true);
+    api.openLightGui(token.document);
   });
 
   menu.appendChild(li);
-  console.log(`${MODULE_ID} | Sidebar button injected.`);
+  console.log(`${VISION_LIGHT_MANAGER_GUI_ID} | Sidebar button injected.`);
 });
+})();

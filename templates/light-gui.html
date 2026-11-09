@@ -59,7 +59,7 @@
   <div class="vlm-panel-label" style="margin-top:14px;">Equip Light Source</div>
   <div class="vlm-sources-grid">
     {{#each sources}}
-    <div class="vlm-source-card {{#if (eq this.id ../activeId)}}vlm-active{{/if}}"
+    <div class="vlm-source-card {{#if this.isActive}}vlm-active{{/if}}"
          data-id="{{this.id}}"
          title="{{this.label}}">
       <div class="vlm-source-icon">{{this.icon}}</div>

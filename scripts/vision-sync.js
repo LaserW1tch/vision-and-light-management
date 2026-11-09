@@ -10,12 +10,13 @@
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
-const MODULE_ID = "vision-light-manager";
+(() => {
+const VISION_LIGHT_MANAGER_MODULE_ID = "vision-light-manager";
 
 /**
- * Maps dnd5e sense keys to Foundry V13 token sight/detection fields.
+ * Maps dnd5e sense keys to Foundry token sight/detection fields.
  *
- * Foundry V13 token vision model:
+ * Foundry V13+ token vision model:
  *   token.sight.range      – how far the token can see in darkness (darkvision)
  *   token.sight.visionMode – vision mode id string
  *   token.detectionModes   – array of { id, enabled, range } objects
@@ -27,39 +28,40 @@ const MODULE_ID = "vision-light-manager";
  *   "tremorsense"     – tremorsense
  *   "truesight"       – truesight
  */
-const SENSE_MAP = {
-  darkvision:  { type: "sight",     modeId: "darkvision"  },
-  blindsight:  { type: "detection", modeId: "blindsight"  },
-  truesight:   { type: "detection", modeId: "truesight"   },
-  tremorsense: { type: "detection", modeId: "tremorsense" },
-};
-
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
 /**
- * Read all relevant senses from a dnd5e actor.
+ * Read all relevant senses from a dnd5e actor. D&D 5e 5.3 moved the numeric
+ * ranges to system.attributes.senses.ranges; older releases expose them
+ * directly under system.attributes.senses.
  * Returns an object like: { darkvision: 60, blindsight: 0, truesight: 30, tremorsense: 0 }
  */
 function getSensesFromActor(actor) {
   const senses = actor.system?.attributes?.senses ?? {};
+  const ranges = senses.ranges;
+  const readRange = key => {
+    // Avoid the deprecated legacy accessors when the modern range object exists.
+    const raw = ranges ? (ranges[key] ?? 0) : (senses[key] ?? 0);
+    const value = typeof raw === "object" && raw !== null
+      ? Number(raw.value ?? raw.range ?? 0)
+      : Number(raw);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
   return {
-    darkvision:  Number(senses.darkvision  ?? 0),
-    blindsight:  Number(senses.blindsight  ?? 0),
-    truesight:   Number(senses.truesight   ?? 0),
-    tremorsense: Number(senses.tremorsense ?? 0),
+    darkvision:  readRange("darkvision"),
+    blindsight:  readRange("blindsight"),
+    truesight:   readRange("truesight"),
+    tremorsense: readRange("tremorsense"),
   };
 }
 
 /**
- * Convert feet to Foundry V13 grid units.
- * sight.range and detectionModes[].range must be in grid units, not feet.
- * Standard 5e: 1 square = 5ft, so 60ft darkvision = 12 grid units.
+ * Foundry sight and detection ranges use the Scene's distance units.
+ * The module currently reads D&D 5e ranges in feet, so store those values
+ * directly when the Scene is configured in feet (the supported setup).
  */
-function ftToGridUnits(ft) {
-  if (!ft || ft === 0) return 0;
-  const scene = game.scenes?.active;
-  const gridDistance = scene?.grid?.distance ?? 5;
-  return ft / gridDistance;
+function ftToDistanceUnits(ft) {
+  return Number.isFinite(ft) ? ft : 0;
 }
 
 /**
@@ -72,7 +74,7 @@ function buildTokenVisionUpdate(senses) {
   // ── Sight (darkvision) ───────────────────────────────────────────────────
   const sight = {
     enabled:    true,
-    range:      ftToGridUnits(senses.darkvision),
+    range:      ftToDistanceUnits(senses.darkvision),
     visionMode: senses.darkvision > 0 ? "darkvision" : "basic",
   };
 
@@ -81,21 +83,30 @@ function buildTokenVisionUpdate(senses) {
     {
       id:      "basicSight",
       enabled: true,
-      range:   ftToGridUnits(senses.darkvision > 0 ? senses.darkvision : 30),
+      // Let core Basic Sight follow the token's vision settings and see
+      // illuminated targets beyond darkvision's range.
+      range:   null,
     }
   ];
 
   if (senses.blindsight > 0) {
-    detectionModes.push({ id: "blindsight",  enabled: true, range: ftToGridUnits(senses.blindsight) });
+    detectionModes.push({ id: "blindsight",  enabled: true, range: ftToDistanceUnits(senses.blindsight) });
   }
   if (senses.truesight > 0) {
-    detectionModes.push({ id: "truesight",   enabled: true, range: ftToGridUnits(senses.truesight) });
+    detectionModes.push({ id: "truesight",   enabled: true, range: ftToDistanceUnits(senses.truesight) });
   }
   if (senses.tremorsense > 0) {
-    detectionModes.push({ id: "tremorsense", enabled: true, range: ftToGridUnits(senses.tremorsense) });
+    detectionModes.push({ id: "tremorsense", enabled: true, range: ftToDistanceUnits(senses.tremorsense) });
   }
 
   return { sight, detectionModes };
+}
+
+/** Replace only the detection modes managed here; retain other modules' modes. */
+function mergeDetectionModes(existingModes = [], managedModes = []) {
+  const managedIds = new Set(["basicSight", "blindsight", "truesight", "tremorsense"]);
+  const preserved = (existingModes ?? []).filter(mode => !managedIds.has(mode.id));
+  return [...preserved, ...managedModes];
 }
 
 /**
@@ -113,9 +124,13 @@ async function applyVisionToActor(actor) {
 
   // ── Update prototype token ───────────────────────────────────────────────
   try {
-    await actor.update({ prototypeToken: tokenUpd });
+    const existingModes = actor.prototypeToken?.detectionModes ?? [];
+    await actor.update({ prototypeToken: {
+      ...tokenUpd,
+      detectionModes: mergeDetectionModes(existingModes, tokenUpd.detectionModes),
+    } });
   } catch(e) {
-    console.warn(`${MODULE_ID} | Failed to update prototype token for ${actor.name}:`, e);
+    console.warn(`${VISION_LIGHT_MANAGER_MODULE_ID} | Failed to update a prototype token:`, e);
   }
 
   // ── Update any live tokens on the canvas ─────────────────────────────────
@@ -124,18 +139,16 @@ async function applyVisionToActor(actor) {
   const liveTokens = canvas.tokens.placeables.filter(t => t.actor?.id === actor.id);
   for (const token of liveTokens) {
     try {
-      await token.document.update(tokenUpd);
+      const liveUpdate = {
+        ...tokenUpd,
+        detectionModes: mergeDetectionModes(token.document.detectionModes, tokenUpd.detectionModes),
+      };
+      await token.document.update(liveUpdate);
     } catch(e) {
-      console.warn(`${MODULE_ID} | Failed to update live token for ${actor.name}:`, e);
+      console.warn(`${VISION_LIGHT_MANAGER_MODULE_ID} | Failed to update a live token:`, e);
     }
   }
 
-  const sensesSummary = Object.entries(senses)
-    .filter(([,v]) => v > 0)
-    .map(([k,v]) => `${k} ${v}ft`)
-    .join(", ") || "none";
-
-  console.log(`${MODULE_ID} | Synced vision for "${actor.name}": ${sensesSummary}`);
 }
 
 /**
@@ -143,22 +156,28 @@ async function applyVisionToActor(actor) {
  */
 async function syncAllPlayerActors() {
   const allActors = game.actors?.contents ?? [];
-  console.log(`${MODULE_ID} | Total actors in world: ${allActors.length}`);
-
-  const playerActors = allActors.filter(a => {
-    const isChar = a.type === "character";
-    const hasOwner = a.hasPlayerOwner;
-    console.log(`${MODULE_ID} |   "${a.name}" — type: ${a.type}, hasPlayerOwner: ${hasOwner}`);
-    return isChar && hasOwner;
-  });
+  const playerActors = allActors.filter(a => a.type === "character" && a.hasPlayerOwner);
 
   for (const actor of playerActors) {
     await applyVisionToActor(actor);
   }
-  console.log(`${MODULE_ID} | Vision sync complete for ${playerActors.length} actor(s).`);
 }
 
 // ── HOOKS ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Expose helpers before light-gui.js installs its ready-time button handler.
+ * Registering on ready avoids depending on the module script loading phase
+ * relative to Foundry's init hook.
+ */
+Hooks.once("ready", () => {
+  game.modules.get(VISION_LIGHT_MANAGER_MODULE_ID).api = {
+    applyVisionToActor,
+    syncAllPlayerActors,
+    getSensesFromActor,
+    buildTokenVisionUpdate,
+  };
+});
 
 /**
  * On world ready — wait for dnd5e to finish its own setup before syncing.
@@ -167,18 +186,17 @@ async function syncAllPlayerActors() {
  * doesn't fire (e.g. on older sub-versions).
  */
 Hooks.once("ready", async () => {
-  console.log(`${MODULE_ID} | World ready — waiting for dnd5e to initialize...`);
+  // Run automatic world-wide writes once from the GM client, not once per
+  // connected player client.
+  if (!game.user.isGM) return;
+  console.log(`${VISION_LIGHT_MANAGER_MODULE_ID} | World ready — waiting for dnd5e to initialize...`);
 
   // Debug: log what actors exist right now
-  console.log(`${MODULE_ID} | Actors at ready:`, game.actors?.contents?.map(a =>
-    `${a.name} (${a.type}, hasPlayerOwner: ${a.hasPlayerOwner})`
-  ));
-
   // dnd5e 5.x fires this hook after its own ready setup
   const dnd5eReady = new Promise(resolve => {
     // If dnd5e.ready fires, resolve immediately
     Hooks.once("dnd5e.ready", () => {
-      console.log(`${MODULE_ID} | dnd5e.ready fired — running vision sync.`);
+      console.log(`${VISION_LIGHT_MANAGER_MODULE_ID} | dnd5e.ready fired — running vision sync.`);
       resolve();
     });
     // Safety fallback: wait 2 seconds regardless
@@ -195,22 +213,12 @@ Hooks.once("ready", async () => {
  * We only care if the "system.attributes.senses" path changed.
  */
 Hooks.on("updateActor", async (actor, changes, _options, _userId) => {
+  // The GM is the authoritative writer for automatic vision synchronization.
+  if (!game.user.isGM) return;
   // Only react to changes that touch senses
   const sensesChanged = foundry.utils.hasProperty(changes, "system.attributes.senses");
   if (!sensesChanged) return;
 
-  console.log(`${MODULE_ID} | Senses changed on "${actor.name}" — re-syncing vision.`);
   await applyVisionToActor(actor);
 });
-
-/**
- * Expose helpers on the module namespace for use by light-gui.js
- */
-Hooks.once("init", () => {
-  game.modules.get(MODULE_ID).api = {
-    applyVisionToActor,
-    syncAllPlayerActors,
-    getSensesFromActor,
-    buildTokenVisionUpdate,
-  };
-});
+})();
