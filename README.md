@@ -1,4 +1,4 @@
-# Vision & Light Manager
+# LaserW1tch's Vision & Light Manager 5e
 
 A Foundry VTT module for **D&D 5e** that automatically syncs token vision settings from character sheets and gives players a simple panel for equipping light sources — all without the GM needing to manually configure token settings.
 
@@ -55,18 +55,18 @@ For a nonmagical flame preset (candle, torch, lamp, or lantern), the panel also 
 
 ## Installation
 
-Download the current module archive, [`vision-light-manager-v1.2.0.zip`](https://github.com/LaserW1tch/vision-and-light-management/releases/download/1.2.0/vision-light-manager-v1.2.0.zip), from the project's GitHub release page.
+Download the current module archive, [`vision-light-manager-v1.2.1.zip`](https://github.com/LaserW1tch/vision-and-light-management/releases/download/1.2.1/vision-light-manager-v1.2.1.zip), from the project's GitHub release page.
 
 ### Via The Forge (Import Wizard)
 1. Go to `forge-vtt.com/setup` → **Summon Import Wizard**
 2. Toggle **off** "Install found packages from the Bazaar"
-3. Upload `vision-light-manager-v1.2.0.zip`
+3. Upload `vision-light-manager-v1.2.1.zip`
 4. Click Analyze and complete the import
 5. Stop and restart your Foundry server
-6. Enable **Vision & Light Manager** in your world's Manage Modules settings
+6. Enable **LaserW1tch's Vision & Light Manager 5e** in your world's Manage Modules settings
 
 ### Via Foundry VTT (self-hosted)
-1. Extract `vision-light-manager-v1.2.0.zip` into your `Data/modules/` directory so the path reads `Data/modules/vision-light-manager/module.json`
+1. Extract `vision-light-manager-v1.2.1.zip` into your `Data/modules/` directory so the path reads `Data/modules/vision-light-manager/module.json`
 2. Restart Foundry
 3. Enable the module in your world's Manage Modules settings
 

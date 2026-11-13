@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Update the user-visible module name to `LaserW1tch's Vision & Light Manager 5e`.
+
 ## 1.2.0
 
 - Add a Control Flames toggle for doubling bright- and dim-light ranges on nonmagical flame presets for one hour of world time.
