@@ -35,6 +35,7 @@ const LIGHT_SOURCES = [
     color: "#ffaa44",
     alpha: 0.25,
     animation: { type: "torch", speed: 2, intensity: 3 },
+    controlFlames: true,
   },
   {
     id:    "torch",
@@ -46,6 +47,7 @@ const LIGHT_SOURCES = [
     color: "#ff8c00",
     alpha: 0.3,
     animation: { type: "torch", speed: 3, intensity: 4 },
+    controlFlames: true,
   },
   {
     id:    "lamp",
@@ -57,6 +59,7 @@ const LIGHT_SOURCES = [
     color: "#ffcc66",
     alpha: 0.25,
     animation: { type: "torch", speed: 1, intensity: 2 },
+    controlFlames: true,
   },
   {
     id:    "hooded_lantern_open",
@@ -68,6 +71,7 @@ const LIGHT_SOURCES = [
     color: "#ffbb44",
     alpha: 0.3,
     animation: { type: "torch", speed: 2, intensity: 3 },
+    controlFlames: true,
   },
   {
     id:    "hooded_lantern_hood",
@@ -79,6 +83,7 @@ const LIGHT_SOURCES = [
     color: "#ffbb44",
     alpha: 0.15,
     animation: { type: "none", speed: 0, intensity: 0 },
+    controlFlames: true,
   },
   {
     id:    "bullseye_lantern",
@@ -90,6 +95,7 @@ const LIGHT_SOURCES = [
     color: "#ffdd88",
     alpha: 0.35,
     animation: { type: "torch", speed: 2, intensity: 2 },
+    controlFlames: true,
   },
   {
     id:    "dancing_lights",
@@ -123,7 +129,7 @@ function ftToSceneUnits(ft) {
 }
 
 // ── BUILD TOKEN LIGHT UPDATE ──────────────────────────────────────────────────
-function buildLightUpdate(source) {
+function buildLightUpdate(source, doubleRanges = false) {
   if (source.id === "none") {
     return {
       "light.dim":    0,
@@ -134,8 +140,8 @@ function buildLightUpdate(source) {
   }
 
   return {
-    "light.dim":    ftToSceneUnits(source.dim),
-    "light.bright": ftToSceneUnits(source.bright),
+    "light.dim":    ftToSceneUnits(source.dim * (doubleRanges ? 2 : 1)),
+    "light.bright": ftToSceneUnits(source.bright * (doubleRanges ? 2 : 1)),
     "light.color":  source.color,
     "light.alpha":  source.alpha,
     "light.angle":  source.angle,
@@ -145,6 +151,25 @@ function buildLightUpdate(source) {
       intensity: source.animation.intensity,
     },
   };
+}
+
+function getControlFlamesEffect(token) {
+  return token.getFlag?.(VISION_LIGHT_MANAGER_GUI_ID, "controlFlames") ?? null;
+}
+
+async function expireControlFlames(worldTime = game.time.worldTime) {
+  if (!game.user.isGM || !Number.isFinite(worldTime)) return;
+  for (const scene of game.scenes) {
+    for (const token of scene.tokens) {
+      const effect = getControlFlamesEffect(token);
+      if (!effect || effect.expiresAt > worldTime) continue;
+      await token.update({
+        "light.bright": effect.baseBright,
+        "light.dim": effect.baseDim,
+        [`flags.${VISION_LIGHT_MANAGER_GUI_ID}.-=controlFlames`]: null,
+      });
+    }
+  }
 }
 
 // ── APPLICATION CLASS ─────────────────────────────────────────────────────────
@@ -167,6 +192,7 @@ class LightSourceApp extends foundry.applications.api.HandlebarsApplicationMixin
     super(options);
     this.token = token;
     this.selectedLightSourceId = null;
+    this.controlFlamesActive = false;
   }
 
   async _prepareContext(options) {
@@ -179,15 +205,23 @@ class LightSourceApp extends foundry.applications.api.HandlebarsApplicationMixin
       ? api.getSensesFromActor(actor)
       : {};
 
-    const matchingSources = LIGHT_SOURCES.filter(source => source.id !== "none" &&
-      Math.abs(ftToSceneUnits(source.dim) - currentDim) < 0.5 &&
-      Math.abs(ftToSceneUnits(source.bright) - currentBright) < 0.5);
+    const matchingSources = LIGHT_SOURCES.filter(source => source.id !== "none" && (
+      (Math.abs(ftToSceneUnits(source.dim) - currentDim) < 0.5 &&
+        Math.abs(ftToSceneUnits(source.bright) - currentBright) < 0.5) ||
+      (source.controlFlames &&
+        Math.abs(ftToSceneUnits(source.dim * 2) - currentDim) < 0.5 &&
+        Math.abs(ftToSceneUnits(source.bright * 2) - currentBright) < 0.5)
+    ));
     const currentColor = this.token.light?.color?.toString().toLowerCase();
     const activeSource = matchingSources.find(source =>
       source.color.toLowerCase() === currentColor &&
       source.angle === (this.token.light?.angle ?? 360)
     ) ?? matchingSources[0];
     const activeId = this.selectedLightSourceId ?? activeSource?.id ?? "none";
+    const effect = getControlFlamesEffect(this.token);
+    const hasActiveControlFlames = Boolean(effect && effect.expiresAt > game.time.worldTime);
+    const canControlFlames = Boolean(activeSource?.controlFlames);
+    this.controlFlamesActive = hasActiveControlFlames && canControlFlames;
 
     return {
       ...context,
@@ -197,6 +231,8 @@ class LightSourceApp extends foundry.applications.api.HandlebarsApplicationMixin
       })),
       senses,
       tokenName: this.token.name,
+      canControlFlames,
+      controlFlamesActive: this.controlFlamesActive,
     };
   }
 
@@ -210,19 +246,63 @@ class LightSourceApp extends foundry.applications.api.HandlebarsApplicationMixin
       if (card) void this.#equipLight(card.dataset.id);
       if (target?.closest("#vlm-sync-vision")) void this.#syncVision();
     }, { signal: this._clickController.signal });
+    this.element.addEventListener("change", event => {
+      if (event.target?.id === "vlm-control-flames") {
+        void this.#setControlFlames(event.target.checked);
+      }
+    }, { signal: this._clickController.signal });
   }
 
   async #equipLight(id) {
     const source = LIGHT_SOURCES.find(candidate => candidate.id === id);
     if (!source) return;
+    const doubleRanges = Boolean(this.controlFlamesActive && source.controlFlames);
     try {
-      await this.token.update(buildLightUpdate(source));
+      const update = buildLightUpdate(source, doubleRanges);
+      if (doubleRanges) {
+        update[`flags.${VISION_LIGHT_MANAGER_GUI_ID}.controlFlames`] = {
+          baseBright: source.bright,
+          baseDim: source.dim,
+          expiresAt: game.time.worldTime + 3600,
+        };
+      } else {
+        update[`flags.${VISION_LIGHT_MANAGER_GUI_ID}.-=controlFlames`] = null;
+      }
+      await this.token.update(update);
       this.selectedLightSourceId = source.id;
       ui.notifications.info(
         source.id === "none"
           ? `${this.token.name} extinguishes their light.`
           : `${this.token.name} equips: ${source.label}.`
       );
+      await this.render();
+    } catch (error) {
+      ui.notifications.error("Failed to update token light.");
+      console.error(`${VISION_LIGHT_MANAGER_GUI_ID} |`, error);
+    }
+  }
+
+  async #setControlFlames(enabled) {
+    const effect = getControlFlamesEffect(this.token);
+    const source = LIGHT_SOURCES.find(candidate => candidate.id === this.selectedLightSourceId) ??
+      LIGHT_SOURCES.find(candidate => candidate.controlFlames &&
+        Math.abs(candidate.dim * (effect ? 2 : 1) - (this.token.light?.dim ?? 0)) < 0.5 &&
+        Math.abs(candidate.bright * (effect ? 2 : 1) - (this.token.light?.bright ?? 0)) < 0.5);
+    if (!source?.controlFlames) return;
+
+    try {
+      const update = buildLightUpdate(source, enabled);
+      if (enabled) {
+        update[`flags.${VISION_LIGHT_MANAGER_GUI_ID}.controlFlames`] = {
+          baseBright: source.bright,
+          baseDim: source.dim,
+          expiresAt: game.time.worldTime + 3600,
+        };
+      } else {
+        update[`flags.${VISION_LIGHT_MANAGER_GUI_ID}.-=controlFlames`] = null;
+      }
+      await this.token.update(update);
+      this.controlFlamesActive = enabled;
       await this.render();
     } catch (error) {
       ui.notifications.error("Failed to update token light.");
@@ -255,6 +335,8 @@ class LightSourceApp extends foundry.applications.api.HandlebarsApplicationMixin
 
 Hooks.once("ready", () => {
   const api = game.modules.get(VISION_LIGHT_MANAGER_GUI_ID).api ?? {};
+  void expireControlFlames();
+  Hooks.on("updateWorldTime", worldTime => void expireControlFlames(worldTime));
 
   // ── openLightGui helper ──
   api.openLightGui = function(actorOrToken) {

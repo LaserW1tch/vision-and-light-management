@@ -74,5 +74,11 @@
     </div>
     {{/each}}
   </div>
+  <label class="vlm-control-flames-option">
+    <input id="vlm-control-flames" type="checkbox"
+      {{#if controlFlamesActive}}checked{{/if}}
+      {{#unless canControlFlames}}disabled{{/unless}}>
+    <span>Control Flames: double light ranges for 1 hour</span>
+  </label>
 
 </div>

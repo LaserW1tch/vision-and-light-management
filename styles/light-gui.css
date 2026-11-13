@@ -249,6 +249,27 @@
   color: #b09040;
 }
 
+.vlm-control-flames-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 140, 0, 0.07);
+  border: 1px solid rgba(255, 160, 40, 0.2);
+  border-radius: 4px;
+  color: #c8a36a;
+  font-size: 11px;
+}
+
+.vlm-control-flames-option input {
+  accent-color: #e58a32;
+}
+
+.vlm-control-flames-option input:disabled {
+  opacity: 0.45;
+}
+
 /* ── TOKEN HUD BUTTON ───────────────────────────────────────── */
 
 #token-hud .vlm-hud-btn,

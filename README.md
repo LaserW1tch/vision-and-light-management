@@ -38,6 +38,8 @@ A sidebar button (🔥) appears in the Foundry sidebar tab strip for all users. 
 | Dancing Lights | — | 10 ft | Pulse animation |
 | Light Cantrip | 20 ft | 40 ft | |
 
+For a nonmagical flame preset (candle, torch, lamp, or lantern), the panel also provides a **Control Flames** toggle that doubles its bright- and dim-light ranges for one hour of world time. The toggle is unavailable for magical sources such as Dancing Lights and Light. This implements the requested doubled ranges; it does not model the spell's other options, such as halving the light, changing its color, or expanding/extinguishing the flame.
+
 > **Note on the Bullseye Lantern:** Because it emits a directional cone rather than a full circle, it projects light in the direction the token is currently facing. Rotating the token rotates the cone.
 
 ---
@@ -53,18 +55,18 @@ A sidebar button (🔥) appears in the Foundry sidebar tab strip for all users. 
 
 ## Installation
 
-Download the current module archive, [`vision-light-manager-v1.1.0.zip`](https://github.com/LaserW1tch/vision-and-light-management/releases/download/1.1.0/vision-light-manager-v1.1.0.zip), from the project's GitHub release page.
+Download the current module archive, [`vision-light-manager-v1.2.0.zip`](https://github.com/LaserW1tch/vision-and-light-management/releases/download/1.2.0/vision-light-manager-v1.2.0.zip), from the project's GitHub release page.
 
 ### Via The Forge (Import Wizard)
 1. Go to `forge-vtt.com/setup` → **Summon Import Wizard**
 2. Toggle **off** "Install found packages from the Bazaar"
-3. Upload `vision-light-manager-v1.1.0.zip`
+3. Upload `vision-light-manager-v1.2.0.zip`
 4. Click Analyze and complete the import
 5. Stop and restart your Foundry server
 6. Enable **Vision & Light Manager** in your world's Manage Modules settings
 
 ### Via Foundry VTT (self-hosted)
-1. Extract `vision-light-manager-v1.1.0.zip` into your `Data/modules/` directory so the path reads `Data/modules/vision-light-manager/module.json`
+1. Extract `vision-light-manager-v1.2.0.zip` into your `Data/modules/` directory so the path reads `Data/modules/vision-light-manager/module.json`
 2. Restart Foundry
 3. Enable the module in your world's Manage Modules settings
 
@@ -109,6 +111,7 @@ Only player-owned character actors are processed. NPC tokens are never touched.
 ## Future goals
 
 - Support metric measurement systems for sense ranges and light presets.
+- Consider additional controls for flame-affecting cantrips such as Thaumaturgy; see `DEVELOPMENT_STATUS.md` for the research notes.
 
 ---
 
